@@ -27,7 +27,7 @@
     CompanyName       = 'Unknown'
 
     # Copyright statement for this module
-    Copyright         = '2021 (c) krymtkts<takatoshi.kuriyama@gmail.com>. All rights reserved.'
+    Copyright         = '(c) 2021 krymtkts<takatoshi.kuriyama@gmail.com>. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description       = 'Simple automation for Money Forward Cloud Attendance.'
