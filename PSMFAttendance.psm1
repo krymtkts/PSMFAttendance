@@ -72,7 +72,7 @@ function Get-MFAuthentication {
     )
 
     if ( $script:MFCredential) {
-        return $script:MFCredential
+        return
     }
     $content = Get-Content -Path $script:MFCredentialPath -ErrorAction Ignore
     if ([String]::IsNullOrEmpty($content)) {
@@ -84,7 +84,7 @@ function Get-MFAuthentication {
             $script:MFCredential = [MFCredentialStore]::new(
                 $cred.OfficeAccountName, $cred.AccountNameOrEmail, ($cred.PassWord | ConvertTo-SecureString)
             )
-            return $script:MFCredential
+            return
         }
         catch {
             Write-Error "Invalid SecureString stored for this module. Use Set-MFAuthentication to update it."
@@ -115,6 +115,7 @@ function Get-DateForDisplay {
 
 function Find-CsrfToken {
     [CmdletBinding()]
+    [OutputType([String])]
     param (
         [Parameter(Mandatory)]
         [String]
@@ -214,6 +215,120 @@ function Connect-MFCloudAttendance {
     }
 }
 
+function Find-AttendanceRecords {
+    [CmdletBinding()]
+    [OutputType([Hashtable])]
+    param (
+        [Parameter(Mandatory)]
+        [String]
+        $Content
+    )
+
+    process {
+        $DatePattern = [regex]'<span class="attendance-table-text-day">(?<date>\d+)</span>'
+        $DateMatches = $DatePattern.Matches($Content)
+        if (!$DateMatches) {
+            throw "No attendance found."
+        }
+        Write-Verbose ($DateMatches | Out-String)
+        $Dates = $DateMatches | ForEach-Object { [int]$_.Groups['date'].Value } | Sort-Object
+        $TimePattern = [regex]'<td class="column-attendance attendance-text-align-center attendance-table-column-">(?<time>(\d{2}:\d{2})?)</td>'
+        $Times = $TimePattern.Matches($Content)
+        if (!$Times) {
+            throw "Cannot scrape attendance time entries."
+        }
+        $Result = @{}
+        $i = 0
+        foreach ($Date in $Dates) {
+            $Result.Add($Date, [PSCustomObject]@{
+                    Start = $Null
+                    End   = $Null
+                })
+            if ($Times[$i] -and $Times[$i].Groups['time']) {
+                $Result[$Date].Start = $Times[$i].Groups['time'].Value
+            }
+            $i = $i + 1
+            if ($Times[$i] -and $Times[$i].Groups['time']) {
+                $Result[$Date].End = $Times[$i].Groups['time'].Value
+            }
+            $i = $i + 1
+        }
+        return $Result
+    }
+}
+
+function Get-AttendanceRecords {
+    [CmdletBinding()]
+    param (
+    )
+
+    begin {
+        Write-Verbose ($script:MySession | Out-String)
+        Write-Verbose ($script:MFSession | Out-String)
+    }
+
+    process {
+        $MyPage = "$script:Mfc/my_page"
+        $NewSessionParams = @{
+            Method     = 'Get'
+            Uri        = $MyPage
+            WebSession = $script:MySession
+        }
+        Write-Verbose ($NewSessionParams | Out-String)
+        try {
+            $Res = Invoke-WebRequest @NewSessionParams
+            $CsrfToken = Find-CsrfToken -Content $Res.Content
+            Write-Verbose $CsrfToken
+        }
+        catch {
+            Write-Error "Failed to connect $MyPage. $_"
+            throw
+        }
+        $Attendances = "$MyPage/attendances"
+        $LoginParams = @{
+            Method     = 'Get'
+            Uri        = $Attendances
+            WebSession = $MySession
+        }
+        Write-Verbose ($LoginParams | Out-String)
+        try {
+            $Res = Invoke-WebRequest @LoginParams
+            Write-Host "Succeed to get content. $(Get-DateForDisplay (Get-Date))"
+            if (!$Res) {
+                Write-Error "Failed to get content from  $Attendances."
+                return
+            }
+            $Records = Find-AttendanceRecords -Content $Res.Content
+            return $Records
+        }
+        catch {
+            Write-Error "Failed to send time record."
+            throw
+        }
+    }
+}
+
+function Test-CanRecord {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [ValidateSet("clock_in", "clock_out")]
+        $TimeRecordEvent
+    )
+    process {
+        $Today = (Get-Date).Day
+        $Records = Get-AttendanceRecords
+        switch ($TimeRecordEvent) {
+            "clock_in" {
+                return -not [boolean] $Records[$Today].Start
+            }
+            "clock_out" {
+                return -not [boolean] $Records[$Today].End
+            }
+        }
+    }
+}
+
 function Send-TimeRecord {
     [CmdletBinding()]
     param (
@@ -283,11 +398,19 @@ function Send-BeginningWork {
     process {
         Get-MFAuthentication
         Connect-MFCloudAttendance
-        Send-TimeRecord -TimeRecordEvent clock_in
+        $Recordable = Test-CanRecord clock_in
+        if ($Recordable) {
+            Send-TimeRecord -TimeRecordEvent clock_in
+        }
     }
 
     end {
-        Write-Host 'Started work!! 😪'
+        if ($Recordable) {
+            Write-Host 'began work!! 😪'
+        }
+        else {
+            Write-Host "Cannot record. It's already begun. 😅"
+        }
     }
 }
 
@@ -299,10 +422,45 @@ function Send-FinishingWork {
     process {
         Get-MFAuthentication
         Connect-MFCloudAttendance
-        Send-TimeRecord -TimeRecordEvent clock_out
+        $Recordable = Test-CanRecord clock_out
+        if ($Recordable) {
+            Send-TimeRecord -TimeRecordEvent clock_out
+        }
     }
 
     end {
-        Write-Host 'Finished work!! 🍻'
+        if ($Recordable) {
+            Write-Host 'finished work!! 🍻'
+        }
+        else {
+            Write-Host "Cannot record. It was already over. 😅"
+        }
+    }
+}
+
+function Get-Attendances {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject[]])]
+    param (
+    )
+
+    begin {
+        Write-Host 'try to get attendances.'
+    }
+
+    process {
+        Get-MFAuthentication
+        Connect-MFCloudAttendance
+        $Records = Get-AttendanceRecords
+        $Keys = $Records.Keys | Sort-Object
+        $Result = @()
+        foreach ($Date in $Keys) {
+            $Result += [PSCustomObject]@{
+                Date  = $Date
+                Start = $Records[$Date].Start
+                End   = $Records[$Date].End
+            }
+        }
+        $Result
     }
 }
