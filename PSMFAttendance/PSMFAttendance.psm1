@@ -29,6 +29,7 @@ $script:MFSession = $null
 $script:MySession = $null
 
 function Set-MFAuthentication {
+    [CmdletBinding(SupportsShouldProcess)]
     [CmdletBinding(DefaultParameterSetName = 'Cache')]
     param(
         [Parameter(Mandatory = $false, ParameterSetName = 'Cache')]
@@ -61,8 +62,10 @@ function Set-MFAuthentication {
         Password           = $Credential.Password | ConvertFrom-SecureString;
     }
 
-    New-Item -Path $script:MFCredentialPath -Force | Out-Null
-    $store | ConvertTo-Json -Compress |  Set-Content -Path $script:MFCredentialPath -Force
+    if ($PSCmdlet.ShouldProcess($script:MFCredentialPath)) {
+        New-Item -Path $script:MFCredentialPath -Force | Out-Null
+        $store | ConvertTo-Json -Compress | Set-Content -Path $script:MFCredentialPath -Force
+    }
 }
 
 function Get-MFAuthentication {
@@ -215,7 +218,7 @@ function Connect-MFCloudAttendance {
     }
 }
 
-function Find-AttendanceRecords {
+function Find-AttendanceRecord {
     [CmdletBinding()]
     [OutputType([Hashtable])]
     param (
@@ -257,7 +260,7 @@ function Find-AttendanceRecords {
     }
 }
 
-function Get-AttendanceRecords {
+function Get-AttendanceRecord {
     [CmdletBinding()]
     param (
     )
@@ -298,7 +301,7 @@ function Get-AttendanceRecords {
                 Write-Error "Failed to get content from  $Attendances."
                 return
             }
-            $Records = Find-AttendanceRecords -Content $Res.Content
+            $Records = Find-AttendanceRecord -Content $Res.Content
             return $Records
         }
         catch {
@@ -317,7 +320,7 @@ function Test-CanRecord {
     )
     process {
         $Today = (Get-Date).Day
-        $Records = Get-AttendanceRecords
+        $Records = Get-AttendanceRecord
         switch ($TimeRecordEvent) {
             "clock_in" {
                 return -not [boolean] $Records[$Today].Start
@@ -438,7 +441,7 @@ function Send-FinishingWork {
     }
 }
 
-function Get-Attendances {
+function Get-MFAttendance {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param (
@@ -451,7 +454,7 @@ function Get-Attendances {
     process {
         Get-MFAuthentication
         Connect-MFCloudAttendance
-        $Records = Get-AttendanceRecords
+        $Records = Get-AttendanceRecord
         $Keys = $Records.Keys | Sort-Object
         $Result = @()
         foreach ($Date in $Keys) {
