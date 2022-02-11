@@ -1,5 +1,7 @@
 # PSMFAttendance
 
+[![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/PSMFAttendance?style=flat-square)](https://www.powershellgallery.com/packages/PSMFAttendance)
+
 PSMFAttendance は、Money Forward クラウド勤怠を CLI で操作するためのツールです。
 
 [利用規約 | 会計ソフト マネーフォワード クラウド](https://biz.moneyforward.com/agreement/)
@@ -16,7 +18,11 @@ Inspired from [puhitaku/mfpy](https://github.com/puhitaku/mfpy)
 
 ### PowerShell Gallery から入手する
 
-未。
+[PowerShell Gallery | PSMFAttendance](https://www.powershellgallery.com/packages/PSMFAttendance/)
+
+```powershell
+Install-Module -Name PSMFAttendance
+```
 
 ### `Module` フォルダに配置する
 
@@ -36,10 +42,13 @@ Inspired from [puhitaku/mfpy](https://github.com/puhitaku/mfpy)
 # はじめに接続情報を登録します。現在インタラクティブ入力のみ対応。
 Set-MFAuthentication
 
+# 当月の勤怠を一覧
+Get-MFAttendance
 # 出勤
 Send-BeginningWork
 # 退勤
 Send-FinishingWork
+# 出勤・退勤共に二重打刻の防止機能があります
 ```
 
 ### 接続情報の初期化
@@ -55,8 +64,9 @@ Clear-MFAuthentication
 
 ## やろうとしていること
 
-- PowerShell Gallery
-- 勤怠の一覧
-- 二重打刻の防止
 - 休憩の打刻
 - 実績の編集
+
+## 既知のバグ
+
+- 打刻漏れがあると勤怠の一覧がずれる
