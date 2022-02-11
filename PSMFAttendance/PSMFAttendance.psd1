@@ -21,13 +21,13 @@
     GUID              = '3ce37078-db1c-4025-a0b7-8b55e4a9e3d5'
 
     # Author of this module
-    Author            = 'krymtkts<takatoshi.kuriyama@gmail.com>'
+    Author            = 'Takatoshi Kuriyama'
 
     # Company or vendor of this module
-    CompanyName       = 'Unknown'
+    # CompanyName       = 'Unknown'
 
     # Copyright statement for this module
-    Copyright         = '(c) 2021 krymtkts<takatoshi.kuriyama@gmail.com>. All rights reserved.'
+    Copyright         = '(c) 2021 Takatoshi Kuriyama. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description       = 'Simple automation for Money Forward Cloud Attendance.'
@@ -102,13 +102,13 @@
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            # Tags = @()
+            Tags       = 'moneyforward', 'automation'
 
             # A URL to the license for this module.
-            # LicenseUri = ''
+            LicenseUri = 'https://github.com/krymtkts/PSMFAttendance/blob/main/LICENSE'
 
             # A URL to the main website for this project.
-            # ProjectUri = ''
+            ProjectUri = 'https://github.com/krymtkts/PSMFAttendance'
 
             # A URL to an icon representing this module.
             # IconUri = ''
@@ -136,4 +136,3 @@
     # DefaultCommandPrefix = ''
 
 }
-
