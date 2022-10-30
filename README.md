@@ -1,5 +1,7 @@
 # PSMFAttendance
 
+**Money Forward クラウド勤怠の実行環境を持たなくなって久しいため、今後メンテナンスの予定はありません。**
+
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/PSMFAttendance?style=flat-square)](https://www.powershellgallery.com/packages/PSMFAttendance)
 
 PSMFAttendance は、Money Forward クラウド勤怠を CLI で操作するためのツールです。
